@@ -1,0 +1,50 @@
+/* src/App.css - Basic styles for wallet connector */
+
+body {
+  margin: 0;
+  padding: 20px;
+  font-family: Arial, sans-serif;
+  background: #f8f9fa;
+  color: #333;
+}
+
+h2 {
+  color: #007bff;
+  margin-bottom: 15px;
+}
+
+button {
+  background: #007bff;
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  margin: 8px 4px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+button:hover {
+  background: #0056b3;
+}
+
+button img {
+  width: 24px;
+  height: 24px;
+}
+
+hr {
+  margin: 20px 0;
+  border-color: #ddd;
+}
+
+div > div {
+  margin-top: 15px;
+  padding: 15px;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}

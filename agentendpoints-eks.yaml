@@ -1,0 +1,25 @@
+# Orders API + Catalog API
+apiVersion: ngrok.k8s.ngrok.com/v1alpha1
+kind: AgentEndpoint
+metadata:
+  name: catalog-internal
+  namespace: default
+spec:
+  bindings:
+    - internal
+  url: https://catalog-eks.internal
+  upstream:
+    url: http://catalog-svc.default:80
+    
+---
+apiVersion: ngrok.k8s.ngrok.com/v1alpha1
+kind: AgentEndpoint
+metadata:
+  name: orders-internal
+  namespace: default
+spec:
+  bindings:
+    - internal
+  url: https://orders-eks.internal
+  upstream:
+    url: http://orders-svc.default:8443

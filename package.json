@@ -1,25 +1,45 @@
-```json
 {
   "name": "thobocoin-project",
-  "version": "1.0.0",
-  "description": "THoBoCoin - BSTM Ecosystem Token",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
   "scripts": {
-    "test": "hardhat test",
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
+    "preview": "vite preview",
     "compile": "hardhat compile",
+    "test": "hardhat test",
     "deploy:testnet": "hardhat run scripts/deploy.js --network bscTestnet",
-    "deploy:mainnet": "hardhat run scripts/deploy.js --network bscMainnet"
-  },
-  "keywords": ["thobocoin", "bstm", "cryptocurrency", "bep20"],
-  "author": "BSTM",
-  "license": "MIT",
-  "devDependencies": {
-    "@nomicfoundation/hardhat-toolbox": "^2.0.2",
-    "@nomiclabs/hardhat-ethers": "^2.2.3",
-    "@nomiclabs/hardhat-etherscan": "^3.1.7",
-    "hardhat": "^2.14.0"
+    "deploy:mainnet": "hardhat run scripts/deploy.js --network bscMainnet",
+    "deploy:local": "hardhat run scripts/deploy.js --network localhost",
+    "node": "hardhat node",
+    "clean": "hardhat clean",
+    "add:liquidity": "hardhat run scripts/add-liquidity.js --network bscTestnet",
+    "setup:rooms": "hardhat run scripts/setup-rooms.js --network bscTestnet"
   },
   "dependencies": {
-    "@openzeppelin/contracts": "^4.9.0",
-    "dotenv": "^16.0.3"
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@nomicfoundation/hardhat-ethers": "^3.0.8",
+    "@nomicfoundation/hardhat-toolbox": "^7.0.0",
+    "@rainbow-me/rainbowkit": "^2.2.10",
+    "@tanstack/react-query": "^5.90.21",
+    "@types/react": "^18.3.3",
+    "@types/react-dom": "^18.3.0",
+    "@typescript-eslint/eslint-plugin": "^7.18.0",
+    "@typescript-eslint/parser": "^7.18.0",
+    "@vitejs/plugin-react": "^4.3.1",
+    "eslint": "^8.57.0",
+    "eslint-plugin-react-hooks": "^4.6.2",
+    "eslint-plugin-react-refresh": "^0.4.9",
+    "ethers": "^6.16.0",
+    "hardhat": "^3.1.10",
+    "typescript": "^5.5.4",
+    "viem": "^2.46.3",
+    "vite": "^7.3.1",
+    "wagmi": "^3.5.0"
   }
 }
