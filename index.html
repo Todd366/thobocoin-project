@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>THoBoCoin Debug</title>
+  <style>body {background:#111;color:#eee;text-align:center;padding:30px;}</style>
+</head>
+<body>
+  <h1>Debug Page</h1>
+  <button id="connect">Test Connect</button>
+  <p id="status">Status: waiting...</p>
+
+  <script>
+    // Injection check
+    console.log("window.ethereum:", !!window.ethereum);
+    document.getElementById('status').textContent = window.ethereum ? "MetaMask detected!" : "MetaMask NOT detected";
+
+    document.getElementById('connect').onclick = () => {
+      if (window.ethereum) {
+        window.ethereum.request({ method: 'eth_requestAccounts' }).then(accounts => {
+          alert("Connected: " + accounts[0]);
+        }).catch(e => alert("Error: " + e.message));
+      } else {
+        alert("No MetaMask - can't connect");
+      }
+    };
+  </script>
+</body>
+</html>
