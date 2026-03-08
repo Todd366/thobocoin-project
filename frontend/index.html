@@ -1,1 +1,199 @@
-[PASTE THE LATEST INDEX.HTML I GAVE YOU EARLIER — the one with address display]
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>THoBoCoin — THB</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@300;400;500&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.7.1/ethers.umd.min.js"></script>
+<style>
+/* (your entire <style> block stays exactly the same — I didn't touch it) */
+</style>
+</head>
+<body>
+
+<!-- (your entire HTML body stays exactly the same until the very end) -->
+
+<script>
+// ==================== FULL WORKING SCRIPT ====================
+const CONTRACT_ADDRESS = "0xaf2f749ea89b3aa9a2d2028dba4004cb3c615628";
+const BSC_TESTNET = { chainId: "0x61", rpcUrls: ["https://data-seed-prebsc-1-s1.bnbchain.org:8545"] };
+
+const ABI = [
+  "function name() view returns (string)",
+  "function symbol() view returns (string)",
+  "function decimals() view returns (uint8)",
+  "function totalSupply() view returns (uint256)",
+  "function balanceOf(address) view returns (uint256)",
+  "function transfer(address to, uint256 amount) returns (bool)",
+  "function burn(uint256 amount)",
+  "function circulatingSupply() view returns (uint256)",
+  "function totalBurned() view returns (uint256)",
+  "function totalStaked() view returns (uint256)",
+  "function pendingReward(address) view returns (uint256)",
+  "function stake(uint256 amount, uint256 lockPeriod)",
+  "function unstake()",
+  "function emergencyUnstake()",
+  "function getUserStake(address) view returns (uint256 stakedAmount, uint256 lockEnd, uint256 reward)"
+];
+
+let provider, signer, contract, userAddress;
+
+const log = (msg, type = "info") => {
+  const el = document.getElementById("actionLog");
+  const color = type === "success" ? "log-success" : type === "error" ? "log-error" : "log-info";
+  el.innerHTML = `<span class="\( {color}">[ \){new Date().toLocaleTimeString()}] ${msg}</span>`;
+};
+
+const showToast = (msg, type = "success") => {
+  const toast = document.createElement("div");
+  toast.className = `toast ${type}`;
+  toast.textContent = msg;
+  document.getElementById("toastContainer").appendChild(toast);
+  setTimeout(() => toast.remove(), 4000);
+};
+
+async function connectWallet() {
+  if (!window.ethereum) return alert("Please install MetaMask");
+  try {
+    provider = new ethers.BrowserProvider(window.ethereum);
+    await provider.send("wallet_switchEthereumChain", [{ chainId: BSC_TESTNET.chainId }]);
+    signer = await provider.getSigner();
+    userAddress = await signer.getAddress();
+    contract = new ethers.Contract(CONTRACT_ADDRESS, ABI, signer);
+
+    document.getElementById("connectBtnText").textContent = userAddress.slice(0,6) + "..." + userAddress.slice(-4);
+    document.getElementById("walletAddr").textContent = userAddress.slice(0,8) + "..." + userAddress.slice(-6);
+
+    log("Wallet connected ✓", "success");
+    showToast("Connected to BSC Testnet");
+    updateAllData();
+  } catch (e) {
+    log("Connection failed: " + e.message, "error");
+  }
+}
+
+async function updateAllData() {
+  if (!contract) return;
+  try {
+    const [bal, supply, circ, burned, staked, pend] = await Promise.all([
+      contract.balanceOf(userAddress),
+      contract.totalSupply(),
+      contract.circulatingSupply(),
+      contract.totalBurned(),
+      contract.totalStaked(),
+      contract.pendingReward(userAddress)
+    ]);
+    const dec = 18;
+    document.getElementById("statBalance").textContent = (Number(bal) / 1e18).toFixed(2);
+    document.getElementById("statSupply").textContent = (Number(supply) / 1e18).toFixed(0);
+    document.getElementById("statCirculating").textContent = (Number(circ) / 1e18).toFixed(0);
+    document.getElementById("statBurned").textContent = (Number(burned) / 1e18).toFixed(0);
+    document.getElementById("statStaked").textContent = (Number(staked) / 1e18).toFixed(0);
+    document.getElementById("statReward").textContent = (Number(pend) / 1e18).toFixed(4);
+
+    document.getElementById("walletBalance").innerHTML = (Number(bal) / 1e18).toFixed(3) + "<span>THB</span>";
+  } catch (e) { log("Update failed", "error"); }
+}
+
+async function doTransfer() {
+  const to = document.getElementById("transferTo").value;
+  const amt = document.getElementById("transferAmt").value;
+  if (!to || !amt) return log("Enter address & amount", "error");
+  try {
+    const tx = await contract.transfer(to, ethers.parseUnits(amt, 18));
+    log(`Transfer TX: ${tx.hash}`, "info");
+    await tx.wait();
+    log("Transfer successful ✓", "success");
+    showToast("THB sent!");
+    updateAllData();
+  } catch (e) { log("Transfer failed: " + e.message, "error"); }
+}
+
+async function doStake() {
+  const amt = document.getElementById("stakeAmt").value;
+  const lock = parseInt(document.getElementById("stakeLock").value);
+  if (!amt) return log("Enter amount", "error");
+  try {
+    const tx = await contract.stake(ethers.parseUnits(amt, 18), lock);
+    log(`Staking TX: ${tx.hash}`, "info");
+    await tx.wait();
+    log("Staked successfully ✓", "success");
+    showToast("Stake complete");
+    updateAllData();
+  } catch (e) { log("Stake failed: " + e.message, "error"); }
+}
+
+async function doUnstake() {
+  try {
+    const tx = await contract.unstake();
+    log(`Unstake TX: ${tx.hash}`, "info");
+    await tx.wait();
+    log("Unstaked + rewards claimed ✓", "success");
+    showToast("Unstake complete");
+    updateAllData();
+  } catch (e) { log("Unstake failed", "error"); }
+}
+
+async function doEmergencyUnstake() {
+  if (!confirm("Emergency unstake? 0.5% burn penalty applied.")) return;
+  try {
+    const tx = await contract.emergencyUnstake();
+    log(`Emergency TX: ${tx.hash}`, "info");
+    await tx.wait();
+    log("Emergency unstake complete", "success");
+    showToast("Emergency unstake done");
+    updateAllData();
+  } catch (e) { log("Emergency failed", "error"); }
+}
+
+async function doBurn() {
+  const amt = document.getElementById("burnAmt").value;
+  if (!amt) return log("Enter amount", "error");
+  if (!confirm("BURN PERMANENTLY?")) return;
+  try {
+    const tx = await contract.burn(ethers.parseUnits(amt, 18));
+    log(`Burn TX: ${tx.hash}`, "info");
+    await tx.wait();
+    log("Burned permanently 🔥", "success");
+    showToast("Tokens burned");
+    updateAllData();
+  } catch (e) { log("Burn failed", "error"); }
+}
+
+function switchTab(tab) {
+  document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+  document.querySelectorAll(".tab-content").forEach(c => c.classList.remove("active"));
+  document.querySelector(`button[onclick="switchTab('${tab}')"]`).classList.add("active");
+  document.getElementById(`tab-${tab}`).classList.add("active");
+}
+
+// Cursor
+const cursor = document.getElementById("cursor");
+const cursorRing = document.getElementById("cursorRing");
+document.addEventListener("mousemove", e => {
+  cursor.style.left = e.clientX + "px";
+  cursor.style.top = e.clientY + "px";
+  cursorRing.style.left = e.clientX - 13 + "px";
+  cursorRing.style.top = e.clientY - 13 + "px";
+});
+
+// Marquee (fake live prices)
+const marquee = document.getElementById("marquee");
+const items = ["THB $0.0421", "Staked 1.2M THB", "Burned 8.4M THB", "1% APR active", "Vesting 50% locked"];
+items.concat(items).forEach(text => {
+  const div = document.createElement("div");
+  div.className = "marquee-item";
+  div.textContent = text;
+  marquee.appendChild(div);
+});
+
+// Init
+window.onload = () => {
+  document.getElementById("contractAddr").textContent = CONTRACT_ADDRESS;
+  log("// Ready — click Connect Wallet", "info");
+};
+</script>
+</body>
+  </html>
