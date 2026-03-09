@@ -1,199 +1,1133 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>THoBoCoin — THB</title>
-<link rel="preconnect" href="https://fonts.googleapis.com"/>
-<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@300;400;500&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet"/>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.7.1/ethers.umd.min.js"></script>
-<style>
-/* (your entire <style> block stays exactly the same — I didn't touch it) */
-</style>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>THoBoCoin — THB (BSC Testnet Live)</title>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@300;400;500&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet"/>
+  <!-- ethers v5 — matches Web3Provider / provider.getSigner() / ethers.utils API used here -->
+  <script src="https://cdn.ethers.io/lib/ethers-5.7.umd.min.js"></script>
+  <style>
+    :root {
+      --gold: #c8a84b;
+      --gold-light: #e8c86a;
+      --black: #080808;
+      --panel: #111111;
+      --border: rgba(200,168,75,0.18);
+      --text: #e8e2d4;
+      --muted: #5a5448;
+      --green: #10b981;
+      --red: #ef4444;
+    }
+    *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      background: var(--black);
+      color: var(--text);
+      font-family: 'DM Mono', monospace;
+      min-height: 100vh;
+      overflow-x: hidden;
+      cursor: none;
+      padding-bottom: 60px;
+    }
+
+    /* ── Cursor ── */
+    #cursor {
+      position: fixed; width: 8px; height: 8px;
+      background: var(--gold); border-radius: 50%;
+      pointer-events: none; z-index: 99999;
+      mix-blend-mode: difference;
+      transform: translate(-50%,-50%);
+      transition: transform .1s ease;
+    }
+    #cursorRing {
+      position: fixed; width: 40px; height: 40px;
+      border: 1.5px solid var(--gold-light); border-radius: 50%;
+      pointer-events: none; z-index: 99998;
+      transform: translate(-50%,-50%);
+      transition: left .12s ease-out, top .12s ease-out;
+    }
+
+    /* ── Layout ── */
+    .container { max-width: 1060px; margin: 0 auto; padding: 0 24px; }
+
+    /* ── Header ── */
+    header {
+      position: sticky; top: 0; z-index: 100;
+      background: rgba(8,8,8,.92);
+      border-bottom: 1px solid var(--border);
+      backdrop-filter: blur(16px);
+      padding: 0 32px; height: 64px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .hdr-logo {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 1.6rem; color: var(--gold);
+      letter-spacing: .08em;
+      text-shadow: 0 0 16px rgba(200,168,75,.5);
+    }
+    .hdr-sub {
+      font-size: .7rem; color: var(--muted);
+      letter-spacing: .3em; text-transform: uppercase;
+    }
+    #connectBtn {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: transparent;
+      border: 1px solid var(--gold);
+      color: var(--gold);
+      padding: 10px 28px;
+      font-family: 'DM Mono', monospace;
+      font-size: .75rem; letter-spacing: .15em; text-transform: uppercase;
+      border-radius: 0; cursor: none;
+      transition: all .3s; box-shadow: none;
+      margin: 0;
+      transform: none !important;
+    }
+    #connectBtn:hover { background: var(--gold); color: #000; }
+    #connectBtn.connected { background: var(--green); border-color: var(--green); color: #fff; }
+
+    /* ── Hero ── */
+    .hero {
+      min-height: 88vh;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      text-align: center;
+      padding: 80px 24px 60px;
+      position: relative; overflow: hidden;
+    }
+    .hero::before {
+      content: '';
+      position: absolute; inset: 0;
+      background: radial-gradient(ellipse 70% 50% at 50% 40%, rgba(200,168,75,.07), transparent 70%);
+      pointer-events: none;
+    }
+    .hero-eyebrow {
+      font-size: .7rem; letter-spacing: .5em;
+      text-transform: uppercase; color: var(--muted);
+      margin-bottom: 20px;
+    }
+    h1 {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: clamp(4rem, 14vw, 10rem);
+      color: var(--gold);
+      line-height: .9;
+      letter-spacing: .02em;
+      text-shadow: 0 0 60px rgba(200,168,75,.5);
+      margin-bottom: 8px;
+    }
+    .hero-sub {
+      font-family: 'Instrument Serif', serif;
+      font-style: italic;
+      font-size: clamp(1rem, 2vw, 1.4rem);
+      color: var(--muted);
+      max-width: 520px;
+      margin: 0 auto 48px;
+      line-height: 1.6;
+    }
+    .live-bar {
+      display: inline-flex; align-items: center; gap: 10px;
+      border: 1px solid var(--border);
+      background: rgba(17,17,17,.8);
+      padding: 10px 20px; font-size: .75rem;
+      color: var(--muted); letter-spacing: .1em;
+      margin-bottom: 44px;
+      backdrop-filter: blur(8px);
+    }
+    .live-dot {
+      width: 6px; height: 6px; border-radius: 50%;
+      background: var(--green);
+      box-shadow: 0 0 6px var(--green);
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+    .hero-actions { display: flex; gap: 14px; flex-wrap: wrap; justify-content: center; }
+    .btn-primary {
+      background: linear-gradient(135deg, var(--gold), #b8932d);
+      color: #000; border: none;
+      padding: 16px 40px;
+      font-family: 'DM Mono', monospace;
+      font-size: .8rem; letter-spacing: .15em; text-transform: uppercase;
+      font-weight: bold; cursor: none;
+      transition: all .3s;
+      box-shadow: 0 8px 28px rgba(200,168,75,.35);
+      border-radius: 0; margin: 0; display: inline-block;
+    }
+    .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 16px 40px rgba(200,168,75,.5); }
+    .btn-outline {
+      background: transparent; border: 1px solid rgba(200,168,75,.3);
+      color: var(--text); padding: 16px 40px;
+      font-family: 'DM Mono', monospace;
+      font-size: .8rem; letter-spacing: .15em; text-transform: uppercase;
+      cursor: none; transition: all .3s;
+      border-radius: 0; margin: 0;
+    }
+    .btn-outline:hover { border-color: var(--gold); color: var(--gold); }
+
+    /* ── Ticker ── */
+    .ticker {
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+      background: rgba(17,17,17,.6);
+      overflow: hidden; padding: 12px 0;
+      position: relative;
+    }
+    .ticker::before, .ticker::after {
+      content: ''; position: absolute;
+      top: 0; bottom: 0; width: 80px; z-index: 2;
+    }
+    .ticker::before { left: 0; background: linear-gradient(to right, var(--black), transparent); }
+    .ticker::after  { right:0; background: linear-gradient(to left,  var(--black), transparent); }
+    .ticker-inner { display:flex; gap:48px; white-space:nowrap; animation: tick 28s linear infinite; }
+    .ticker-item {
+      display: inline-flex; align-items: center; gap: 10px;
+      font-size: .72rem; letter-spacing: .2em; color: var(--muted); flex-shrink: 0;
+    }
+    .ticker-item .tv { color: var(--gold); font-family: 'Bebas Neue', sans-serif; font-size: .9rem; }
+    .ticker-item .ts { color: rgba(200,168,75,.35); font-size: .6rem; }
+    @keyframes tick { from{transform:translateX(0)} to{transform:translateX(-50%)} }
+
+    /* ── Stats strip ── */
+    .stats-section { padding: 80px 0; }
+    .section-label {
+      font-size: .65rem; letter-spacing: .5em;
+      text-transform: uppercase; color: var(--muted);
+      margin-bottom: 8px;
+      display: flex; align-items: center; gap: 12px;
+    }
+    .section-label::before { content:''; width:32px; height:1px; background:var(--gold); }
+    .section-title {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: clamp(2rem, 5vw, 3.5rem);
+      color: var(--gold); letter-spacing: .04em;
+      margin-bottom: 8px;
+    }
+    .section-desc {
+      font-family: 'Instrument Serif', serif;
+      font-style: italic; font-size: 1rem;
+      color: var(--muted); margin-bottom: 48px;
+    }
+    .stats-grid {
+      display: grid; grid-template-columns: repeat(4, 1fr);
+      border: 1px solid var(--border);
+    }
+    .stat-box {
+      background: var(--panel);
+      padding: 28px 22px;
+      border-right: 1px solid var(--border);
+      position: relative; overflow: hidden;
+      transition: background .25s;
+    }
+    .stat-box:last-child { border-right: none; }
+    .stat-box::after {
+      content: ''; position: absolute;
+      bottom: 0; left: 0; right: 0; height: 2px;
+      background: linear-gradient(90deg, var(--gold), #b8932d);
+      transform: scaleX(0); transform-origin: left; transition: transform .4s;
+    }
+    .stat-box:hover { background: #161616; }
+    .stat-box:hover::after { transform: scaleX(1); }
+    .stat-lbl { font-size: .65rem; letter-spacing: .4em; text-transform: uppercase; color: var(--muted); margin-bottom: 12px; }
+    .stat-val {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: clamp(1.6rem, 3vw, 2.4rem);
+      color: var(--gold); line-height: 1; margin-bottom: 4px;
+    }
+    .stat-unit { font-size: .7rem; color: var(--muted); }
+
+    /* ── Wallet panel ── */
+    .wallet-panel {
+      border: 1px solid var(--border);
+      background: var(--panel);
+      margin-top: 48px;
+      position: relative; overflow: hidden;
+    }
+    .wallet-panel::before {
+      content: ''; position: absolute;
+      top: -200px; right: -200px;
+      width: 400px; height: 400px; border-radius: 50%;
+      background: radial-gradient(circle, rgba(200,168,75,.04), transparent 70%);
+      pointer-events: none;
+    }
+    .wp-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 20px 32px;
+      border-bottom: 1px solid var(--border);
+    }
+    .wp-chip {
+      font-size: .65rem; letter-spacing: .2em; text-transform: uppercase;
+      border: 1px solid var(--border);
+      background: rgba(0,0,0,.4);
+      padding: 5px 12px; color: var(--muted);
+      display: inline-flex; align-items: center; gap: 6px;
+    }
+    .wp-chip .cdot { width:5px; height:5px; border-radius:50%; background:#f0b90b; }
+    #walletAddr {
+      font-size: .82rem; color: var(--green); letter-spacing: .05em;
+      min-height: 20px; text-align: left;
+    }
+    .wp-body { padding: 32px; }
+    .wp-bal {
+      display: flex; align-items: baseline; gap: 12px;
+      padding: 24px 0; border-bottom: 1px solid rgba(255,255,255,.05);
+      margin-bottom: 32px;
+    }
+    .wp-bal-num {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: clamp(2.4rem, 6vw, 4.5rem);
+      color: var(--gold); line-height: 1;
+      text-shadow: 0 0 30px rgba(200,168,75,.4);
+    }
+    .wp-bal-sym { font-size: 1.1rem; color: var(--muted); }
+    .wp-bal-lbl {
+      font-size: .65rem; letter-spacing: .3em;
+      text-transform: uppercase; color: var(--muted);
+      margin-left: auto; line-height: 1.8;
+    }
+
+    /* Tabs */
+    .tabs { display:flex; border-bottom:1px solid var(--border); margin-bottom:28px; }
+    .tab {
+      padding: 12px 24px; font-size: .65rem; letter-spacing: .25em;
+      text-transform: uppercase; color: var(--muted);
+      cursor: none; background: none; border: none;
+      border-bottom: 2px solid transparent; margin-bottom: -1px;
+      transition: all .2s; font-family: 'DM Mono', monospace;
+    }
+    .tab.on { color: var(--gold); border-bottom-color: var(--gold); }
+    .tab:hover:not(.on) { color: var(--text); }
+    .tab-pane { display: none; }
+    .tab-pane.on { display: block; }
+
+    /* Fields */
+    .field { margin-bottom: 20px; }
+    .field label {
+      display: block; font-size: .62rem;
+      letter-spacing: .4em; text-transform: uppercase;
+      color: var(--muted); margin-bottom: 8px;
+    }
+    .field input, .field select {
+      width: 100%; background: #000;
+      border: 1px solid var(--border);
+      color: var(--text); padding: 13px 16px;
+      font-family: 'DM Mono', monospace; font-size: .85rem;
+      outline: none; transition: border-color .2s;
+      -webkit-appearance: none;
+    }
+    .field input:focus, .field select:focus { border-color: var(--gold); }
+    .field input::placeholder { color: rgba(90,84,72,.6); }
+    .field select option { background: #111; }
+    .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .field-note { font-size: .7rem; color: var(--muted); margin-top:8px; line-height:1.6; }
+    .field-note.danger { color: var(--red); }
+
+    /* Stake info bar */
+    .sbar {
+      display: grid; grid-template-columns: repeat(3,1fr);
+      border: 1px solid var(--border); background: #000;
+      margin-bottom: 24px;
+    }
+    .sbar-item { padding:16px 18px; border-right:1px solid var(--border); }
+    .sbar-item:last-child { border-right:none; }
+    .sbar-lbl { font-size:.6rem; letter-spacing:.35em; text-transform:uppercase; color:var(--muted); margin-bottom:6px; }
+    .sbar-val { font-family:'Bebas Neue',sans-serif; font-size:1.4rem; color:var(--text); }
+
+    /* Action buttons inside panel */
+    .act-btn {
+      background: linear-gradient(135deg, var(--gold), #b8932d);
+      color: #000; border: none; padding: 14px 32px;
+      font-family: 'DM Mono', monospace;
+      font-size: .72rem; letter-spacing: .15em; text-transform: uppercase;
+      font-weight: bold; cursor: none; transition: all .3s;
+      border-radius: 0; margin: 0;
+    }
+    .act-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(200,168,75,.4); }
+    .act-btn-danger {
+      background: transparent; color: var(--red);
+      border: 1px solid var(--red); padding: 10px 22px;
+      font-family: 'DM Mono', monospace;
+      font-size: .65rem; letter-spacing: .15em; text-transform: uppercase;
+      cursor: none; transition: all .2s;
+      border-radius: 0; margin: 0;
+    }
+    .act-btn-danger:hover { background: var(--red); color: #fff; }
+
+    /* Log terminal */
+    .log-term {
+      margin-top: 24px; background: #000;
+      border: 1px solid var(--border);
+      padding: 16px 20px; font-size: .8rem;
+      color: var(--muted); min-height: 48px;
+      line-height: 1.9; max-height: 160px;
+      overflow-y: auto;
+    }
+    .log-term::before { content: '> '; color: rgba(200,168,75,.4); }
+    .lok { color: var(--green); }
+    .lerr { color: var(--red); }
+    .linf { color: #4a8fff; }
+
+    /* ── Tokenomics ── */
+    .tok-section { padding: 80px 0; }
+    .tok-grid { display: grid; grid-template-columns: 1.3fr 1fr; gap: 56px; align-items: start; }
+    .tbl { border: 1px solid var(--border); overflow: hidden; }
+    .trow {
+      display: grid; grid-template-columns: 1fr 72px 96px;
+      padding: 15px 20px; border-bottom: 1px solid var(--border);
+      gap: 14px; align-items: center; transition: background .2s;
+    }
+    .trow:last-child { border-bottom: none; }
+    .trow:hover { background: #161616; }
+    .trow.thead { background: #0e0e0e; font-size: .6rem; letter-spacing: .35em; text-transform: uppercase; color: var(--muted); }
+    .tpct { font-family: 'Bebas Neue', sans-serif; font-size: 1.4rem; color: var(--gold); }
+    .tamt { font-size: .7rem; color: var(--muted); text-align: right; }
+    .info-box {
+      margin-top: 24px; padding: 22px;
+      background: #0e0e0e; border: 1px solid var(--border);
+    }
+    .info-box-title { font-size: .62rem; letter-spacing: .4em; text-transform: uppercase; color: var(--muted); margin-bottom: 14px; }
+    .info-row { font-size: .78rem; color: var(--muted); line-height: 1.7; padding: 5px 0; border-bottom: 1px solid rgba(255,255,255,.04); }
+    .info-row:last-child { border-bottom: none; }
+    .info-row span { color: var(--gold); float: right; }
+
+    /* Donut */
+    .donut-wrap { display: flex; flex-direction: column; align-items: center; gap: 28px; }
+    .donut-ring { position: relative; width: 220px; height: 220px; }
+    .donut-ring svg { transform: rotate(-90deg); }
+    .donut-ctr {
+      position: absolute; inset: 0;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center; text-align: center;
+    }
+    .dc-n {
+      font-family: 'Bebas Neue', sans-serif; font-size: 2.6rem;
+      color: var(--gold); line-height: 1;
+      text-shadow: 0 0 20px rgba(200,168,75,.5);
+    }
+    .dc-l { font-size: .6rem; letter-spacing: .4em; text-transform: uppercase; color: var(--muted); margin-top: 4px; }
+    .legend { width: 100%; }
+    .leg { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--border); }
+    .leg:last-child { border-bottom: none; }
+    .legdot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+    .legname { flex: 1; font-size: .78rem; }
+    .legpct { font-family: 'Bebas Neue', sans-serif; font-size: 1.3rem; color: var(--gold); }
+
+    /* ── Features ── */
+    .feat-section { padding: 80px 0; }
+    .feat-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 1px; background: var(--border); }
+    .feat {
+      background: var(--panel); padding: 36px 28px;
+      transition: background .25s; position: relative; overflow: hidden;
+    }
+    .feat::before {
+      content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px;
+      background: linear-gradient(90deg, transparent, var(--gold), transparent);
+      transform: scaleX(0); transition: transform .5s;
+    }
+    .feat:hover { background: #161616; }
+    .feat:hover::before { transform: scaleX(1); }
+    .feat-ico { font-size: 1.8rem; margin-bottom: 16px; display: block; }
+    .feat-name { font-family: 'Bebas Neue', sans-serif; font-size: 1.3rem; color: var(--gold); letter-spacing: .05em; margin-bottom: 8px; }
+    .feat-desc { font-size: .77rem; color: var(--muted); line-height: 1.8; }
+    .feat-tag { display: inline-block; margin-top: 14px; font-size: .6rem; letter-spacing: .25em; text-transform: uppercase; color: var(--muted); border: 1px solid var(--border); padding: 4px 10px; }
+
+    /* ── Roadmap ── */
+    .road-section { padding: 80px 0; }
+    .road-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 72px; align-items: start; }
+    .road-line { position: relative; padding-left: 48px; }
+    .road-line::before {
+      content: ''; position: absolute;
+      left: 12px; top: 10px; bottom: 0; width: 1px;
+      background: linear-gradient(to bottom, var(--gold), rgba(42,38,64,.4) 70%, transparent);
+    }
+    .road-item { position: relative; margin-bottom: 48px; opacity: .45; transition: opacity .3s; }
+    .road-item.now { opacity: 1; }
+    .road-item:hover { opacity: 1; }
+    .road-dot {
+      position: absolute; left: -42px; top: 7px;
+      width: 12px; height: 12px; border-radius: 50%;
+      border: 1px solid var(--muted); background: var(--black);
+    }
+    .road-item.now .road-dot {
+      background: var(--gold); border-color: var(--gold);
+      box-shadow: 0 0 0 4px rgba(200,168,75,.15), 0 0 16px rgba(200,168,75,.5);
+    }
+    .road-phase { font-size: .6rem; letter-spacing: .4em; text-transform: uppercase; color: var(--gold); margin-bottom: 5px; }
+    .road-title { font-family: 'Bebas Neue', sans-serif; font-size: 1.4rem; color: var(--text); letter-spacing: .04em; margin-bottom: 8px; }
+    .road-desc { font-size: .77rem; color: var(--muted); line-height: 1.8; }
+    .persp {
+      background: var(--panel); border: 1px solid var(--border);
+      padding: 40px; position: relative; overflow: hidden;
+    }
+    .persp::after {
+      content: ''; position: absolute;
+      top: 0; right: 0; bottom: 0; width: 2px;
+      background: linear-gradient(180deg, var(--gold), #b8932d, transparent);
+    }
+    .persp-title { font-family: 'Bebas Neue', sans-serif; font-size: 1.6rem; color: var(--gold); letter-spacing: .04em; margin-bottom: 6px; }
+    .persp-sub { font-family: 'Instrument Serif', serif; font-style: italic; color: var(--muted); font-size: .92rem; margin-bottom: 28px; line-height: 1.5; }
+    .pp { display: flex; gap: 14px; padding: 16px; background: #0e0e0e; border-left: 2px solid rgba(200,168,75,.3); margin-bottom: 10px; }
+    .pp-ico { font-size: 1.1rem; flex-shrink: 0; margin-top: 2px; }
+    .pp-title { font-size: .82rem; font-weight: bold; color: var(--text); margin-bottom: 4px; letter-spacing: .04em; }
+    .pp-body { font-size: .73rem; color: var(--muted); line-height: 1.7; }
+
+    /* ── Toasts ── */
+    #toasts { position: fixed; bottom: 60px; right: 24px; z-index: 4000; display: flex; flex-direction: column; gap: 10px; }
+    .toast {
+      background: var(--panel); border-left: 3px solid var(--gold);
+      border: 1px solid var(--border); border-left-width: 3px;
+      padding: 13px 18px; font-size: .78rem; max-width: 320px;
+      color: var(--text); animation: tslide .3s ease;
+      line-height: 1.5;
+    }
+    .toast.ok  { border-left-color: var(--green); }
+    .toast.err { border-left-color: var(--red); }
+    @keyframes tslide { from{opacity:0;transform:translateX(18px)} to{opacity:1;transform:translateX(0)} }
+
+    /* ── Bottom marquee ── */
+    #marquee {
+      position: fixed; bottom: 0; left: 0; right: 0;
+      height: 44px; line-height: 44px;
+      background: rgba(8,8,8,.96);
+      border-top: 1px solid var(--border);
+      overflow: hidden; white-space: nowrap;
+      color: var(--gold); font-size: .82rem;
+      z-index: 300;
+    }
+    .mq-inner { display: inline-flex; gap: 48px; animation: mq 28s linear infinite; }
+    .mq-item { display: inline-flex; align-items: center; gap: 8px; flex-shrink: 0; color: var(--muted); letter-spacing: .15em; }
+    .mq-item .mv { color: var(--gold); font-family: 'Bebas Neue', sans-serif; }
+    .mq-item .ms { color: rgba(200,168,75,.3); }
+    @keyframes mq { from{transform:translateX(0)} to{transform:translateX(-50%)} }
+
+    /* ── Footer ── */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 40px 32px 80px;
+      display: flex; align-items: flex-start; justify-content: space-between;
+      flex-wrap: wrap; gap: 28px;
+    }
+    .f-brand { font-family: 'Bebas Neue', sans-serif; font-size: 1.4rem; color: var(--gold); letter-spacing: .06em; }
+    .f-sub { font-size: .65rem; letter-spacing: .35em; color: var(--muted); text-transform: uppercase; margin-top: 4px; }
+    .f-links { display: flex; gap: 24px; flex-wrap: wrap; }
+    .f-links a { color: var(--muted); text-decoration: none; font-size: .65rem; letter-spacing: .2em; text-transform: uppercase; transition: color .2s; }
+    .f-links a:hover { color: var(--gold); }
+    .f-note { font-size: .65rem; color: rgba(90,84,72,.5); text-align: right; line-height: 1.7; }
+
+    /* ── Divider ── */
+    .divider { height: 1px; background: linear-gradient(90deg, transparent, var(--border) 30%, var(--border) 70%, transparent); }
+
+    /* ── Responsive ── */
+    @media(max-width:1024px) {
+      .stats-grid { grid-template-columns: repeat(2,1fr); }
+      .tok-grid { grid-template-columns: 1fr; }
+      .feat-grid { grid-template-columns: repeat(2,1fr); }
+      .road-grid { grid-template-columns: 1fr; }
+    }
+    @media(max-width:640px) {
+      header { padding: 0 16px; }
+      .stats-grid { grid-template-columns: 1fr 1fr; }
+      .feat-grid { grid-template-columns: 1fr; }
+      .field-row { grid-template-columns: 1fr; }
+      .wp-body { padding: 20px; }
+      .container { padding: 0 16px; }
+      footer { flex-direction: column; }
+      .f-note { text-align: left; }
+    }
+  </style>
 </head>
 <body>
 
-<!-- (your entire HTML body stays exactly the same until the very end) -->
+<div id="cursor"></div>
+<div id="cursorRing"></div>
+<div id="toasts"></div>
 
+<!-- ═══ HEADER ═══ -->
+<header>
+  <div>
+    <div class="hdr-logo">THoBoCoin</div>
+    <div class="hdr-sub">THB · BSC Testnet · DeFi</div>
+  </div>
+  <button id="connectBtn" onclick="connectWallet()"><span id="btnTxt">Connect Wallet</span></button>
+</header>
+
+<!-- ═══ HERO ═══ -->
+<section class="hero">
+  <p class="hero-eyebrow">BSTM Sovereignty Token · BSC Testnet Live · OpenZeppelin v5</p>
+  <h1>THoBo<br>Coin</h1>
+  <p class="hero-sub">A deflationary DeFi token built on discipline — staking rewards, vesting architecture, and ironclad security on Binance Smart Chain.</p>
+  <div class="live-bar">
+    <span class="live-dot"></span>
+    <span id="heroTick">Protocol live on BSC Testnet · Connect wallet to load metrics</span>
+  </div>
+  <div class="hero-actions">
+    <button class="btn-primary" onclick="connectWallet()">Launch App →</button>
+    <button class="btn-outline" onclick="document.getElementById('tokenomics').scrollIntoView({behavior:'smooth'})">Tokenomics</button>
+  </div>
+</section>
+
+<!-- ═══ TICKER ═══ -->
+<div class="ticker">
+  <div class="ticker-inner" id="tickerInner"></div>
+</div>
+
+<!-- ═══ DASHBOARD ═══ -->
+<div class="stats-section">
+  <div class="container">
+    <p class="section-label">Live On-Chain Metrics</p>
+    <h2 class="section-title">Dashboard</h2>
+    <p class="section-desc">Real-time data from the THoBoCoin contract.</p>
+
+    <div class="stats-grid">
+      <div class="stat-box"><div class="stat-lbl">Your Balance</div><div class="stat-val" id="sBalance">—</div><div class="stat-unit">THB</div></div>
+      <div class="stat-box"><div class="stat-lbl">Total Supply</div><div class="stat-val" id="sSupply">—</div><div class="stat-unit">/ 1B max</div></div>
+      <div class="stat-box"><div class="stat-lbl">Total Burned</div><div class="stat-val" id="sBurned">—</div><div class="stat-unit">Permanently</div></div>
+      <div class="stat-box"><div class="stat-lbl">Total Staked</div><div class="stat-val" id="sStaked">—</div><div class="stat-unit">Locked</div></div>
+    </div>
+
+    <!-- WALLET PANEL -->
+    <div class="wallet-panel">
+      <div class="wp-header">
+        <span class="wp-chip"><span class="cdot"></span> BSC Testnet</span>
+        <div id="walletAddr">Not connected</div>
+        <span style="font-size:.65rem;color:var(--muted);letter-spacing:.2em">CHAIN ID · 97</span>
+      </div>
+      <div class="wp-body">
+        <div class="wp-bal">
+          <div class="wp-bal-num" id="wBal">0.000</div>
+          <div class="wp-bal-sym">THB</div>
+          <div class="wp-bal-lbl">Available<br/>Balance</div>
+        </div>
+
+        <div class="tabs">
+          <button class="tab on"  onclick="switchTab('transfer',this)">Transfer</button>
+          <button class="tab"     onclick="switchTab('stake',this)">Stake</button>
+          <button class="tab"     onclick="switchTab('unstake',this)">Unstake</button>
+          <button class="tab"     onclick="switchTab('burn',this)">Burn</button>
+        </div>
+
+        <!-- Transfer -->
+        <div class="tab-pane on" id="pane-transfer">
+          <div class="field"><label>Recipient Address</label><input id="tTo" type="text" placeholder="0x..."/></div>
+          <div class="field"><label>Amount (THB)</label><input id="tAmt" type="number" placeholder="0.00" min="0"/></div>
+          <button class="act-btn" onclick="doTransfer()">Send THB →</button>
+        </div>
+
+        <!-- Stake -->
+        <div class="tab-pane" id="pane-stake">
+          <div class="sbar">
+            <div class="sbar-item"><div class="sbar-lbl">Staked</div><div class="sbar-val" id="siAmt">—</div></div>
+            <div class="sbar-item"><div class="sbar-lbl">Lock</div><div class="sbar-val" id="siLock">—</div></div>
+            <div class="sbar-item"><div class="sbar-lbl">Reward</div><div class="sbar-val" id="siRew">—</div></div>
+          </div>
+          <div class="field-row">
+            <div class="field"><label>Amount to Stake</label><input id="sAmt" type="number" placeholder="0.00" min="0"/></div>
+            <div class="field"><label>Lock Period</label>
+              <select id="sLock">
+                <option value="0">No lock</option>
+                <option value="2592000">30 days</option>
+                <option value="7776000">90 days</option>
+                <option value="15552000">180 days</option>
+                <option value="31536000">365 days</option>
+              </select>
+            </div>
+          </div>
+          <p class="field-note">◆ 0.1% burn fee on stake &nbsp;·&nbsp; 1% APR &nbsp;·&nbsp; Early exit = 0.5% penalty</p>
+          <br/>
+          <button class="act-btn" onclick="doStake()">Stake THB →</button>
+        </div>
+
+        <!-- Unstake -->
+        <div class="tab-pane" id="pane-unstake">
+          <div class="sbar">
+            <div class="sbar-item"><div class="sbar-lbl">Your Stake</div><div class="sbar-val" id="uiAmt">—</div></div>
+            <div class="sbar-item"><div class="sbar-lbl">Unlocks</div><div class="sbar-val" id="uiUnlock">—</div></div>
+            <div class="sbar-item"><div class="sbar-lbl">Accrued</div><div class="sbar-val" id="uiRew">—</div></div>
+          </div>
+          <div style="display:flex;gap:14px;flex-wrap:wrap">
+            <button class="act-btn" onclick="doUnstake()">Unstake + Claim →</button>
+            <button class="act-btn-danger" onclick="doEmergency()">Emergency (−0.5%)</button>
+          </div>
+        </div>
+
+        <!-- Burn -->
+        <div class="tab-pane" id="pane-burn">
+          <div class="field"><label>Amount to Burn</label><input id="bAmt" type="number" placeholder="0.00" min="0"/></div>
+          <p class="field-note danger">⚠ Irreversible. Burned tokens removed from supply forever.</p>
+          <br/>
+          <button class="act-btn-danger" onclick="doBurn()">Burn THB Permanently</button>
+        </div>
+
+        <div class="log-term" id="logTerm">Ready — click Connect Wallet to begin</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="divider"></div>
+
+<!-- ═══ TOKENOMICS ═══ -->
+<div class="tok-section" id="tokenomics">
+  <div class="container">
+    <p class="section-label">Supply Architecture</p>
+    <h2 class="section-title">Tokenomics</h2>
+    <p class="section-desc">Engineered for deflation, sustainability, and long-term holder alignment.</p>
+    <div class="tok-grid">
+      <div>
+        <div class="tbl">
+          <div class="trow thead"><span>Allocation</span><span>Share</span><span style="text-align:right">Amount</span></div>
+          <div class="trow"><span>Liquid (Deployer)</span><span class="tpct">50%</span><span class="tamt">500M THB</span></div>
+          <div class="trow"><span>Vesting Pool (12mo)</span><span class="tpct">50%</span><span class="tamt">500M THB</span></div>
+          <div class="trow"><span>Staking APR</span><span class="tpct">1%</span><span class="tamt">Per year</span></div>
+          <div class="trow"><span>Stake Burn Fee</span><span class="tpct">0.1%</span><span class="tamt">Per stake</span></div>
+          <div class="trow"><span>Early Exit Penalty</span><span class="tpct">0.5%</span><span class="tamt">Burned</span></div>
+        </div>
+        <div class="info-box">
+          <div class="info-box-title">Deployed Contract</div>
+          <div class="info-row">Address <span id="contractAddr" style="font-size:.7rem;word-break:break-all">0xaf2f749ea89b3aa9a2d2028dba4004cb3c615628</span></div>
+          <div class="info-row">Network <span>BSC Testnet</span></div>
+          <div class="info-row">Chain ID <span>97</span></div>
+          <div class="info-row">Compiler <span>Solidity 0.8.19</span></div>
+          <div class="info-row">Framework <span>OpenZeppelin v5</span></div>
+        </div>
+        <div class="info-box" style="margin-top:16px">
+          <div class="info-box-title">Security Architecture</div>
+          <div class="info-row">Ownership <span>Ownable2Step</span></div>
+          <div class="info-row">Reentrancy <span>ReentrancyGuard</span></div>
+          <div class="info-row">Pausable <span>Full transfer halt</span></div>
+          <div class="info-row">Vesting cliff <span>30 days</span></div>
+          <div class="info-row">Reward cap <span>MAX_SUPPLY</span></div>
+        </div>
+      </div>
+      <div class="donut-wrap">
+        <div class="donut-ring">
+          <svg width="220" height="220" viewBox="0 0 220 220">
+            <circle cx="110" cy="110" r="88" fill="none" stroke="#1a1a1a" stroke-width="26"/>
+            <circle cx="110" cy="110" r="88" fill="none" stroke="url(#gg)" stroke-width="26" stroke-dasharray="277 277" stroke-dashoffset="0"/>
+            <circle cx="110" cy="110" r="88" fill="none" stroke="#1a1428" stroke-width="26" stroke-dasharray="277 277" stroke-dashoffset="-277"/>
+            <defs>
+              <linearGradient id="gg" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#c8a84b"/>
+                <stop offset="100%" stop-color="#b8932d"/>
+              </linearGradient>
+            </defs>
+          </svg>
+          <div class="donut-ctr"><div class="dc-n">1B</div><div class="dc-l">Max Supply</div></div>
+        </div>
+        <div class="legend">
+          <div class="leg"><div class="legdot" style="background:linear-gradient(135deg,#c8a84b,#b8932d)"></div><span class="legname">Liquid Supply</span><span class="legpct">50%</span></div>
+          <div class="leg"><div class="legdot" style="background:#1a1428"></div><span class="legname">Vested Supply</span><span class="legpct">50%</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="divider"></div>
+
+<!-- ═══ FEATURES ═══ -->
+<div class="feat-section" id="about">
+  <div class="container">
+    <p class="section-label">Protocol Features</p>
+    <h2 class="section-title">Built Different</h2>
+    <p class="section-desc">Each mechanism designed with purpose. Nothing gratuitous. Everything earned.</p>
+    <div class="feat-grid">
+      <div class="feat"><span class="feat-ico">⚡</span><div class="feat-name">Staking Engine</div><div class="feat-desc">1% APR accrues per second. Auto-compounds on each new stake. Hard-capped by MAX_SUPPLY — no runaway inflation.</div><span class="feat-tag">DeFi Core</span></div>
+      <div class="feat"><span class="feat-ico">🔥</span><div class="feat-name">Burn Mechanics</div><div class="feat-desc">0.1% burned on every stake. 0.5% on early exits. Manual burn open to all. Every transaction deflates supply.</div><span class="feat-tag">Deflationary</span></div>
+      <div class="feat"><span class="feat-ico">⏳</span><div class="feat-name">Vesting Architecture</div><div class="feat-desc">50% locked 12 months, 30-day cliff, linear daily release. Owner incentives locked with community growth.</div><span class="feat-tag">Anti-Rug</span></div>
+      <div class="feat"><span class="feat-ico">🔐</span><div class="feat-name">Security Stack</div><div class="feat-desc">Ownable2Step, ReentrancyGuard, Pausable — OpenZeppelin v5. The same battle-tested stack used by billion-dollar protocols.</div><span class="feat-tag">Auditable</span></div>
+      <div class="feat"><span class="feat-ico">🚨</span><div class="feat-name">Emergency Layer</div><div class="feat-desc">Immediate unstake with 0.5% penalty. Owner force-recovery. Protocol pause kills all transfers instantly.</div><span class="feat-tag">Recovery</span></div>
+      <div class="feat"><span class="feat-ico">🔭</span><div class="feat-name">Full Transparency</div><div class="feat-desc">Every metric on-chain: circulatingSupply, totalBurned, totalStaked, pendingReward. No hidden state ever.</div><span class="feat-tag">On-Chain</span></div>
+    </div>
+  </div>
+</div>
+
+<div class="divider"></div>
+
+<!-- ═══ ROADMAP ═══ -->
+<div class="road-section" id="roadmap">
+  <div class="container">
+    <p class="section-label">Development Journey</p>
+    <h2 class="section-title">Roadmap</h2>
+    <p class="section-desc">A disciplined path from testnet to mature cross-chain protocol.</p>
+    <div class="road-grid">
+      <div class="road-line">
+        <div class="road-item now">
+          <div class="road-dot"></div>
+          <div class="road-phase">Phase 1 — Now</div>
+          <div class="road-title">BSC Testnet Live</div>
+          <div class="road-desc">Contract deployed at 0xaf2f…628. Full staking, burning, vesting live. DApp frontend with MetaMask integration.</div>
+        </div>
+        <div class="road-item">
+          <div class="road-dot"></div>
+          <div class="road-phase">Phase 2 — Q2 2026</div>
+          <div class="road-title">Audit & Mainnet</div>
+          <div class="road-desc">Professional smart contract audit. BSC Mainnet deploy. PancakeSwap liquidity. CoinGecko + CMC listings.</div>
+        </div>
+        <div class="road-item">
+          <div class="road-dot"></div>
+          <div class="road-phase">Phase 3 — Q3 2026</div>
+          <div class="road-title">Governance & DAO</div>
+          <div class="road-desc">On-chain governance. Community treasury. Staking tiers with multiplied rewards for long-term holders.</div>
+        </div>
+        <div class="road-item">
+          <div class="road-dot"></div>
+          <div class="road-phase">Phase 4 — Q4 2026</div>
+          <div class="road-title">Cross-Chain</div>
+          <div class="road-desc">Bridge to Ethereum, Polygon, Arbitrum. Multi-chain staking vaults. NFT utility layer.</div>
+        </div>
+      </div>
+      <div class="persp">
+        <div class="persp-title">Recommendations</div>
+        <div class="persp-sub">What will make THoBoCoin a protocol that lasts a decade.</div>
+        <div class="pp"><div class="pp-ico">🛡️</div><div><div class="pp-title">Audit Before Mainnet</div><div class="pp-body">Certik, Hacken, or Code4rena. An audit costs money — a hack costs everything and destroys trust permanently.</div></div></div>
+        <div class="pp"><div class="pp-ico">💧</div><div><div class="pp-title">Lock Liquidity at Launch</div><div class="pp-body">PinkLock or Team Finance. Lock LP tokens 12+ months minimum. This is the #1 thing communities check before buying.</div></div></div>
+        <div class="pp"><div class="pp-ico">📣</div><div><div class="pp-title">Community Before Price</div><div class="pp-body">500 true believers outperform 10,000 speculators. Build Telegram, Discord, Twitter before chasing listings.</div></div></div>
+        <div class="pp"><div class="pp-ico">📈</div><div><div class="pp-title">Lead With the Vesting</div><div class="pp-body">50% vested for a year is rare and bold. It tells the market you're not here for a quick exit.</div></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ FOOTER ═══ -->
+<footer>
+  <div>
+    <div class="f-brand">THoBoCoin</div>
+    <div class="f-sub">THB · BSC · DeFi</div>
+  </div>
+  <div class="f-links">
+    <a href="https://testnet.bscscan.com/address/0xaf2f749ea89b3aa9a2d2028dba4004cb3c615628" target="_blank">BSCScan</a>
+    <a href="#">GitHub</a>
+    <a href="#">Whitepaper</a>
+    <a href="#">Telegram</a>
+    <a href="#">Twitter</a>
+  </div>
+  <div class="f-note">© 2026 THoBoCoin · All rights reserved<br/>Not financial advice.</div>
+</footer>
+
+<div id="marquee"><div class="mq-inner" id="mqInner"></div></div>
+
+<!-- ═══════════════════════════════════════════════════════
+     SCRIPT — ethers v5 API throughout (Web3Provider, getSigner,
+     ethers.utils.formatEther, ethers.utils.parseEther)
+     Contract: 0xaf2f749ea89b3aa9a2d2028dba4004cb3c615628
+     ═══════════════════════════════════════════════════════ -->
 <script>
-// ==================== FULL WORKING SCRIPT ====================
-const CONTRACT_ADDRESS = "0xaf2f749ea89b3aa9a2d2028dba4004cb3c615628";
-const BSC_TESTNET = { chainId: "0x61", rpcUrls: ["https://data-seed-prebsc-1-s1.bnbchain.org:8545"] };
+"use strict";
 
-const ABI = [
+// ── CONFIG ──────────────────────────────────────────────
+var CONTRACT_ADDRESS = "0xaf2f749ea89b3aa9a2d2028dba4004cb3c615628";
+var BSC_TESTNET = {
+  chainId: "0x61",
+  chainName: "BSC Testnet",
+  rpcUrls: ["https://data-seed-prebsc-1-s1.binance.org:8545"],
+  nativeCurrency: { name: "tBNB", symbol: "tBNB", decimals: 18 },
+  blockExplorerUrls: ["https://testnet.bscscan.com"]
+};
+
+// ── ABI — matches THoBoCoin.sol exactly ─────────────────
+var ABI = [
   "function name() view returns (string)",
   "function symbol() view returns (string)",
   "function decimals() view returns (uint8)",
   "function totalSupply() view returns (uint256)",
-  "function balanceOf(address) view returns (uint256)",
+  "function balanceOf(address owner) view returns (uint256)",
   "function transfer(address to, uint256 amount) returns (bool)",
   "function burn(uint256 amount)",
   "function circulatingSupply() view returns (uint256)",
   "function totalBurned() view returns (uint256)",
   "function totalStaked() view returns (uint256)",
-  "function pendingReward(address) view returns (uint256)",
+  "function pendingReward(address user) view returns (uint256)",
+  "function stakes(address user) view returns (uint256 amount, uint256 timestamp, uint256 lockPeriod)",
   "function stake(uint256 amount, uint256 lockPeriod)",
   "function unstake()",
   "function emergencyUnstake()",
-  "function getUserStake(address) view returns (uint256 stakedAmount, uint256 lockEnd, uint256 reward)"
+  "function owner() view returns (address)"
 ];
 
-let provider, signer, contract, userAddress;
+// ── STATE ────────────────────────────────────────────────
+var provider, signer, contract, userAddress;
+var pollTimer = null;
 
-const log = (msg, type = "info") => {
-  const el = document.getElementById("actionLog");
-  const color = type === "success" ? "log-success" : type === "error" ? "log-error" : "log-info";
-  el.innerHTML = `<span class="\( {color}">[ \){new Date().toLocaleTimeString()}] ${msg}</span>`;
-};
+// ── UTILS ────────────────────────────────────────────────
+function fmt(wei, dec) {
+  dec = dec || 2;
+  var n = parseFloat(ethers.utils.formatEther(wei));
+  if (n >= 1e9) return (n / 1e9).toFixed(dec) + "B";
+  if (n >= 1e6) return (n / 1e6).toFixed(dec) + "M";
+  if (n >= 1e3) return (n / 1e3).toFixed(dec) + "K";
+  return n.toFixed(dec);
+}
+function shortAddr(a) { return a ? a.slice(0,6) + "…" + a.slice(-4) : ""; }
+function lockLabel(secs) {
+  secs = Number(secs);
+  if (!secs) return "No lock";
+  var d = Math.floor(secs / 86400);
+  if (d >= 365) return Math.floor(d/365) + " yr";
+  if (d >= 30)  return Math.floor(d/30)  + " mo";
+  return d + " days";
+}
+function fmtDate(ts) {
+  ts = Number(ts);
+  if (!ts) return "—";
+  return new Date(ts * 1000).toLocaleDateString(undefined, {month:"short",day:"numeric",year:"numeric"});
+}
 
-const showToast = (msg, type = "success") => {
-  const toast = document.createElement("div");
-  toast.className = `toast ${type}`;
-  toast.textContent = msg;
-  document.getElementById("toastContainer").appendChild(toast);
-  setTimeout(() => toast.remove(), 4000);
-};
+// ── DOM ──────────────────────────────────────────────────
+function $$(id) { return document.getElementById(id); }
+function setText(id, v) { var n = $$(id); if (n) n.textContent = v; }
 
-async function connectWallet() {
-  if (!window.ethereum) return alert("Please install MetaMask");
-  try {
-    provider = new ethers.BrowserProvider(window.ethereum);
-    await provider.send("wallet_switchEthereumChain", [{ chainId: BSC_TESTNET.chainId }]);
-    signer = await provider.getSigner();
-    userAddress = await signer.getAddress();
-    contract = new ethers.Contract(CONTRACT_ADDRESS, ABI, signer);
+function log(msg, type) {
+  var node = $$("logTerm");
+  if (!node) return;
+  var cls = type === "ok" ? "lok" : type === "err" ? "lerr" : type === "info" ? "linf" : "";
+  node.innerHTML = '<span class="' + cls + '">[' + new Date().toLocaleTimeString() + "] " + msg + "</span>";
+}
 
-    document.getElementById("connectBtnText").textContent = userAddress.slice(0,6) + "..." + userAddress.slice(-4);
-    document.getElementById("walletAddr").textContent = userAddress.slice(0,8) + "..." + userAddress.slice(-6);
+function toast(msg, type) {
+  var c = $$("toasts");
+  if (!c) return;
+  var t = document.createElement("div");
+  t.className = "toast" + (type === "ok" ? " ok" : type === "err" ? " err" : "");
+  t.textContent = msg;
+  c.appendChild(t);
+  setTimeout(function() { t.remove(); }, 4200);
+}
 
-    log("Wallet connected ✓", "success");
-    showToast("Connected to BSC Testnet");
-    updateAllData();
-  } catch (e) {
-    log("Connection failed: " + e.message, "error");
+// ── CURSOR ───────────────────────────────────────────────
+(function() {
+  var cur = $$("cursor"), ring = $$("cursorRing");
+  var mx = 0, my = 0, rx = 0, ry = 0;
+  document.addEventListener("mousemove", function(e) {
+    mx = e.clientX; my = e.clientY;
+    cur.style.left = mx + "px"; cur.style.top = my + "px";
+  });
+  (function anim() {
+    rx += (mx - rx) * 0.12; ry += (my - ry) * 0.12;
+    ring.style.left = rx + "px"; ring.style.top = ry + "px";
+    requestAnimationFrame(anim);
+  })();
+})();
+
+// ── TICKER ───────────────────────────────────────────────
+(function() {
+  var words = [
+    ["THoBoCoin","THB"],["Contract","0xaf2f…628"],["Supply","1,000,000,000"],
+    ["Staking APR","1%"],["Burn on Stake","0.1%"],["Early Exit","0.5%"],
+    ["Chain","BSC Testnet"],["OpenZeppelin","v5"],["Solidity","0.8.19"],
+    ["Vesting","365 Days"],["BSTM Rooms","63"],["DAO","Active"]
+  ];
+  var all = words.concat(words).concat(words).concat(words);
+
+  // ticker-inner (top)
+  var ti = $$("tickerInner");
+  if (ti) ti.innerHTML = all.map(function(p) {
+    return '<span class="ticker-item">' + p[0] + ' <span class="tv">' + p[1] + '</span> <span class="ts">✦</span></span>';
+  }).join("");
+
+  // bottom marquee
+  var mq = $$("mqInner");
+  if (mq) mq.innerHTML = all.map(function(p) {
+    return '<span class="mq-item">' + p[0] + ' <span class="mv">' + p[1] + '</span> <span class="ms">✦</span></span>';
+  }).join("");
+})();
+
+// ── HEADER SCROLL ────────────────────────────────────────
+window.addEventListener("scroll", function() {
+  // nothing extra needed — header is always sticky
+});
+
+// ── WALLET ───────────────────────────────────────────────
+function connectWallet() {
+  if (!window.ethereum) { toast("MetaMask not found — please install it", "err"); return; }
+
+  // ethers v5: Web3Provider
+  provider = new ethers.providers.Web3Provider(window.ethereum);
+
+  provider.send("eth_requestAccounts", [])
+    .then(function() {
+      return window.ethereum.request({
+        method: "wallet_switchEthereumChain",
+        params: [{ chainId: BSC_TESTNET.chainId }]
+      });
+    })
+    .catch(function(sw) {
+      if (sw.code === 4902) {
+        return window.ethereum.request({
+          method: "wallet_addEthereumChain",
+          params: [BSC_TESTNET]
+        });
+      }
+      // If user already on BSC just continue
+    })
+    .then(function() {
+      // Re-init provider after chain switch so it picks up the new network
+      provider = new ethers.providers.Web3Provider(window.ethereum);
+      signer = provider.getSigner();
+      return signer.getAddress();
+    })
+    .then(function(addr) {
+      userAddress = addr;
+      contract = new ethers.Contract(CONTRACT_ADDRESS, ABI, signer);
+
+      setText("btnTxt", shortAddr(userAddress));
+      $$("connectBtn").classList.add("connected");
+      setText("walletAddr", userAddress);
+
+      toast("Connected: " + shortAddr(userAddress), "ok");
+      log("Wallet connected: " + userAddress, "ok");
+
+      loadStats();
+      if (pollTimer) clearInterval(pollTimer);
+      pollTimer = setInterval(loadStats, 15000);
+    })
+    .catch(function(e) {
+      var msg = e.reason || e.message || "Connection failed";
+      toast(msg, "err");
+      log("Error: " + msg, "err");
+    });
+
+  window.ethereum.on("accountsChanged", function() { location.reload(); });
+  window.ethereum.on("chainChanged",    function() { location.reload(); });
+}
+
+// ── STATS ────────────────────────────────────────────────
+function loadStats() {
+  if (!contract || !userAddress) return;
+  Promise.allSettled([
+    contract.balanceOf(userAddress),
+    contract.totalSupply(),
+    contract.totalBurned(),
+    contract.totalStaked(),
+    contract.pendingReward(userAddress)
+  ]).then(function(res) {
+    var v = res.map(function(r) { return r.status === "fulfilled" ? r.value : ethers.BigNumber.from(0); });
+    setText("sBalance", fmt(v[0]));
+    setText("sSupply",  fmt(v[1]));
+    setText("sBurned",  fmt(v[2]));
+    setText("sStaked",  fmt(v[3]));
+    setText("wBal",     fmt(v[0], 3));
+    setText("heroTick",
+      "Supply: " + fmt(v[1]) + " · Burned: " + fmt(v[2]) + " · Staked: " + fmt(v[3]) + " · Reward: " + fmt(v[4], 4) + " THB"
+    );
+  }).catch(function(e) { console.error("[THB] stats:", e); });
+}
+
+// ── STAKE INFO ───────────────────────────────────────────
+function loadStakeInfo() {
+  if (!contract || !userAddress) return;
+  Promise.all([
+    contract.stakes(userAddress),
+    contract.pendingReward(userAddress)
+  ]).then(function(res) {
+    var s = res[0], rw = res[1];
+    var amtFmt  = s.amount.gt(0) ? fmt(s.amount) + " THB" : "None";
+    var lockFmt = lockLabel(s.lockPeriod);
+    var unlFmt  = fmtDate(s.timestamp.add(s.lockPeriod));
+    var rwFmt   = fmt(rw, 4) + " THB";
+    setText("siAmt",    amtFmt);
+    setText("siLock",   lockFmt);
+    setText("siRew",    rwFmt);
+    setText("uiAmt",    amtFmt);
+    setText("uiUnlock", unlFmt);
+    setText("uiRew",    rwFmt);
+  }).catch(function(e) { console.error("[THB] stake info:", e); });
+}
+
+// ── TX HELPER ────────────────────────────────────────────
+function sendTx(txFn, pendMsg, okMsg) {
+  log(pendMsg, "info");
+  return txFn()
+    .then(function(tx) {
+      toast("Tx sent: " + tx.hash.slice(0,12) + "…", "ok");
+      log("Confirming: " + tx.hash.slice(0,18) + "…", "info");
+      return tx.wait();
+    })
+    .then(function() {
+      toast(okMsg, "ok");
+      log(okMsg, "ok");
+      loadStats();
+    })
+    .catch(function(e) {
+      var msg = e.reason || e.message || "Transaction failed";
+      toast(msg, "err");
+      log("Error: " + msg, "err");
+    });
+}
+
+// ── ACTIONS ──────────────────────────────────────────────
+function doTransfer() {
+  if (!contract) { toast("Connect wallet first", "err"); return; }
+  var to  = $$("tTo").value.trim();
+  var amt = $$("tAmt").value;
+  if (!to || !ethers.utils.isAddress(to)) { toast("Invalid address", "err"); return; }
+  if (!amt || parseFloat(amt) <= 0)        { toast("Enter a valid amount", "err"); return; }
+  sendTx(
+    function() { return contract.transfer(to, ethers.utils.parseEther(amt)); },
+    "Sending " + amt + " THB to " + shortAddr(to) + "…",
+    "Sent " + amt + " THB → " + shortAddr(to) + " ✓"
+  );
+}
+
+function doStake() {
+  if (!contract) { toast("Connect wallet first", "err"); return; }
+  var amt  = $$("sAmt").value;
+  var lock = $$("sLock").value || "0";
+  if (!amt || parseFloat(amt) <= 0) { toast("Enter a valid stake amount", "err"); return; }
+  sendTx(
+    function() { return contract.stake(ethers.utils.parseEther(amt), ethers.BigNumber.from(lock)); },
+    "Staking " + amt + " THB (lock: " + lockLabel(lock) + ")…",
+    "Staked " + amt + " THB ✓"
+  ).then(function() { loadStakeInfo(); });
+}
+
+function doUnstake() {
+  if (!contract) { toast("Connect wallet first", "err"); return; }
+  sendTx(
+    function() { return contract.unstake(); },
+    "Unstaking and claiming rewards…",
+    "Unstaked + rewards claimed ✓"
+  );
+}
+
+function doEmergency() {
+  if (!contract) { toast("Connect wallet first", "err"); return; }
+  if (!confirm("Emergency unstake burns 0.5% of your staked balance.\nThis cannot be undone. Continue?")) return;
+  sendTx(
+    function() { return contract.emergencyUnstake(); },
+    "Emergency unstaking (0.5% burn penalty)…",
+    "Emergency unstake done ✓"
+  );
+}
+
+function doBurn() {
+  if (!contract) { toast("Connect wallet first", "err"); return; }
+  var amt = $$("bAmt").value;
+  if (!amt || parseFloat(amt) <= 0) { toast("Enter a valid burn amount", "err"); return; }
+  if (!confirm("Permanently burn " + amt + " THB?\nThis reduces total supply forever and cannot be undone.")) return;
+  sendTx(
+    function() { return contract.burn(ethers.utils.parseEther(amt)); },
+    "Burning " + amt + " THB permanently…",
+    amt + " THB burned 🔥 — supply reduced ✓"
+  );
+}
+
+// ── TABS ─────────────────────────────────────────────────
+function switchTab(name, el) {
+  document.querySelectorAll(".tab").forEach(function(t) { t.classList.remove("on"); });
+  document.querySelectorAll(".tab-pane").forEach(function(p) { p.classList.remove("on"); });
+  el.classList.add("on");
+  var pane = $$("pane-" + name);
+  if (pane) pane.classList.add("on");
+  if (name === "stake" || name === "unstake") loadStakeInfo();
+}
+
+// ── AUTO-CONNECT ─────────────────────────────────────────
+window.addEventListener("load", function() {
+  if (window.ethereum && window.ethereum.selectedAddress) {
+    connectWallet();
   }
-}
-
-async function updateAllData() {
-  if (!contract) return;
-  try {
-    const [bal, supply, circ, burned, staked, pend] = await Promise.all([
-      contract.balanceOf(userAddress),
-      contract.totalSupply(),
-      contract.circulatingSupply(),
-      contract.totalBurned(),
-      contract.totalStaked(),
-      contract.pendingReward(userAddress)
-    ]);
-    const dec = 18;
-    document.getElementById("statBalance").textContent = (Number(bal) / 1e18).toFixed(2);
-    document.getElementById("statSupply").textContent = (Number(supply) / 1e18).toFixed(0);
-    document.getElementById("statCirculating").textContent = (Number(circ) / 1e18).toFixed(0);
-    document.getElementById("statBurned").textContent = (Number(burned) / 1e18).toFixed(0);
-    document.getElementById("statStaked").textContent = (Number(staked) / 1e18).toFixed(0);
-    document.getElementById("statReward").textContent = (Number(pend) / 1e18).toFixed(4);
-
-    document.getElementById("walletBalance").innerHTML = (Number(bal) / 1e18).toFixed(3) + "<span>THB</span>";
-  } catch (e) { log("Update failed", "error"); }
-}
-
-async function doTransfer() {
-  const to = document.getElementById("transferTo").value;
-  const amt = document.getElementById("transferAmt").value;
-  if (!to || !amt) return log("Enter address & amount", "error");
-  try {
-    const tx = await contract.transfer(to, ethers.parseUnits(amt, 18));
-    log(`Transfer TX: ${tx.hash}`, "info");
-    await tx.wait();
-    log("Transfer successful ✓", "success");
-    showToast("THB sent!");
-    updateAllData();
-  } catch (e) { log("Transfer failed: " + e.message, "error"); }
-}
-
-async function doStake() {
-  const amt = document.getElementById("stakeAmt").value;
-  const lock = parseInt(document.getElementById("stakeLock").value);
-  if (!amt) return log("Enter amount", "error");
-  try {
-    const tx = await contract.stake(ethers.parseUnits(amt, 18), lock);
-    log(`Staking TX: ${tx.hash}`, "info");
-    await tx.wait();
-    log("Staked successfully ✓", "success");
-    showToast("Stake complete");
-    updateAllData();
-  } catch (e) { log("Stake failed: " + e.message, "error"); }
-}
-
-async function doUnstake() {
-  try {
-    const tx = await contract.unstake();
-    log(`Unstake TX: ${tx.hash}`, "info");
-    await tx.wait();
-    log("Unstaked + rewards claimed ✓", "success");
-    showToast("Unstake complete");
-    updateAllData();
-  } catch (e) { log("Unstake failed", "error"); }
-}
-
-async function doEmergencyUnstake() {
-  if (!confirm("Emergency unstake? 0.5% burn penalty applied.")) return;
-  try {
-    const tx = await contract.emergencyUnstake();
-    log(`Emergency TX: ${tx.hash}`, "info");
-    await tx.wait();
-    log("Emergency unstake complete", "success");
-    showToast("Emergency unstake done");
-    updateAllData();
-  } catch (e) { log("Emergency failed", "error"); }
-}
-
-async function doBurn() {
-  const amt = document.getElementById("burnAmt").value;
-  if (!amt) return log("Enter amount", "error");
-  if (!confirm("BURN PERMANENTLY?")) return;
-  try {
-    const tx = await contract.burn(ethers.parseUnits(amt, 18));
-    log(`Burn TX: ${tx.hash}`, "info");
-    await tx.wait();
-    log("Burned permanently 🔥", "success");
-    showToast("Tokens burned");
-    updateAllData();
-  } catch (e) { log("Burn failed", "error"); }
-}
-
-function switchTab(tab) {
-  document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
-  document.querySelectorAll(".tab-content").forEach(c => c.classList.remove("active"));
-  document.querySelector(`button[onclick="switchTab('${tab}')"]`).classList.add("active");
-  document.getElementById(`tab-${tab}`).classList.add("active");
-}
-
-// Cursor
-const cursor = document.getElementById("cursor");
-const cursorRing = document.getElementById("cursorRing");
-document.addEventListener("mousemove", e => {
-  cursor.style.left = e.clientX + "px";
-  cursor.style.top = e.clientY + "px";
-  cursorRing.style.left = e.clientX - 13 + "px";
-  cursorRing.style.top = e.clientY - 13 + "px";
 });
-
-// Marquee (fake live prices)
-const marquee = document.getElementById("marquee");
-const items = ["THB $0.0421", "Staked 1.2M THB", "Burned 8.4M THB", "1% APR active", "Vesting 50% locked"];
-items.concat(items).forEach(text => {
-  const div = document.createElement("div");
-  div.className = "marquee-item";
-  div.textContent = text;
-  marquee.appendChild(div);
-});
-
-// Init
-window.onload = () => {
-  document.getElementById("contractAddr").textContent = CONTRACT_ADDRESS;
-  log("// Ready — click Connect Wallet", "info");
-};
 </script>
+
 </body>
-  </html>
+</html>
+
